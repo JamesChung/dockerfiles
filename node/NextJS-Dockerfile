@@ -1,0 +1,30 @@
+FROM node:16 as builder
+WORKDIR /app
+COPY ./ /app/
+# Disable npm update notification
+# https://docs.npmjs.com/cli/v7/using-npm/config#update-notifier
+ENV npm_config_update_notifier=false
+# Clean Install is also an option but needs package-lock.json
+# RUN npm ci && npm run build
+RUN npm install && npm run build
+
+FROM alpine:latest as certs
+RUN apk --update add ca-certificates
+
+FROM node:16-alpine
+WORKDIR /app
+COPY --from=builder --chown=node:node /app/.next ./.next
+COPY --from=builder --chown=node:node /app/next.config.js ./next.config.js
+COPY --from=builder --chown=node:node /app/public ./public
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/package.json ./package.json
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+USER node
+# Disable npm update notification
+# https://docs.npmjs.com/cli/v7/using-npm/config#update-notifier
+ENV npm_config_update_notifier=false
+ENV NODE_ENV=production
+ENV PORT=8080
+EXPOSE 8080
+ENTRYPOINT [ "npm" ]
+CMD [ "start" ]
