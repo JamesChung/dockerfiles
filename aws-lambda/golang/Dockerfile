@@ -1,9 +1,7 @@
-FROM golang:latest as builder
+FROM public.ecr.aws/docker/library/golang:latest as builder
 WORKDIR /app
 COPY . /app
-ENV GOOS=linux
-ENV GOARCH=amd64
-RUN go build -tags lambda.norpc -o bootstrap
+RUN GOOS=linux GOARCH=amd64 go build -tags lambda.norpc -o bootstrap
 
 FROM public.ecr.aws/lambda/provided:al2
 COPY --from=builder /app/bootstrap ${LAMBDA_RUNTIME_DIR}
